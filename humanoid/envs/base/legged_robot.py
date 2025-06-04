@@ -32,6 +32,7 @@
 
 import os
 import numpy as np
+import xml.etree.ElementTree as ET
 
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
@@ -73,6 +74,7 @@ class LeggedRobot(BaseTask):
         self.height_samples = None
         self.debug_viz = False
         self.init_done = False
+        self.asset_type = None
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
         if not self.headless:
@@ -583,6 +585,24 @@ class LeggedRobot(BaseTask):
         self.gym.add_triangle_mesh(self.sim, self.terrain.vertices.flatten(order='C'), self.terrain.triangles.flatten(order='C'), tm_params)   
         self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
 
+    def fix_dof_props_asset(self, props):
+        import mujoco
+        xml_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
+        model = mujoco.MjModel.from_xml_path(xml_path)
+
+        jnt_range = torch.from_numpy(model.jnt_range).to(self.device).to(torch.float32)
+        jnt_stiffness = torch.from_numpy(model.jnt_stiffness).to(self.device).to(torch.float32)
+        dof_frictionloss = torch.from_numpy(model.dof_frictionloss).to(self.device).to(torch.float32)
+        actuator_ctrlrange = torch.from_numpy(model.actuator_ctrlrange).to(self.device)
+        for i in range(len(props)):
+            props["lower"][i] = jnt_range[i+1, 0]
+            props["upper"][i] = jnt_range[i+1, 1]
+            props["stiffness"][i] = jnt_stiffness[i+1]
+            props["friction"][i] = dof_frictionloss[i+6]
+            assert abs(actuator_ctrlrange[i, 0]) == abs(actuator_ctrlrange[i, 1])
+            props["effort"][i] = abs(actuator_ctrlrange[i, 0])
+        return props
+
     def _create_envs(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
@@ -593,6 +613,11 @@ class LeggedRobot(BaseTask):
              3. Store indices of different bodies of the robot
         """
         asset_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
+        xml_root = ET.parse(asset_path).getroot()
+        if xml_root.tag == "mujoco":
+            self.asset_type = "mjcf"
+        else:
+            self.asset_type = "urdf"
         asset_root = os.path.dirname(asset_path)
         asset_file = os.path.basename(asset_path)
 
@@ -615,6 +640,8 @@ class LeggedRobot(BaseTask):
         self.num_dof = self.gym.get_asset_dof_count(robot_asset)
         self.num_bodies = self.gym.get_asset_rigid_body_count(robot_asset)
         dof_props_asset = self.gym.get_asset_dof_properties(robot_asset)
+        if self.asset_type == "mjcf":
+            dof_props_asset = self.fix_dof_props_asset(dof_props_asset)
         rigid_shape_props_asset = self.gym.get_asset_rigid_shape_properties(robot_asset)
 
         # save body names from the asset
