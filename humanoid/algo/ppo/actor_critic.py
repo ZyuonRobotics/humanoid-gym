@@ -126,3 +126,59 @@ class ActorCritic(nn.Module):
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
         return value
+
+if __name__ == '__main__':
+    from argparse import ArgumentParser
+    from normalizer import EmpiricalNormalization
+    import onnxruntime
+    import numpy as np
+
+    parser = ArgumentParser()
+    parser.add_argument("path", type=str)
+    parser.add_argument("--single_obs_num", default=47, type=int)
+    parser.add_argument("--single_privileged_obs_num", default=74, type=int)
+    parser.add_argument("--action_num", default=12, type=int)
+    parser.add_argument("--frame_stack", default=15, type=int)
+    parser.add_argument("--c_frame_stack", default=3, type=int)
+
+    args = parser.parse_args()
+
+    actor_critic = ActorCritic(
+        args.single_obs_num * args.frame_stack,
+        args.single_privileged_obs_num * args.c_frame_stack,
+        args.action_num,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[768, 256, 128],
+    )
+    obs_normalizer = EmpiricalNormalization(shape=(args.single_obs_num * args.frame_stack), until=int(1.0e8))
+    actor_critic.eval()
+    obs_normalizer.eval()
+
+    state_dict = torch.load(args.path, weights_only=True)
+
+    actor_critic.load_state_dict(state_dict["model_state_dict"])
+    obs_normalizer.load_state_dict(state_dict["obs_norm_state_dict"])
+
+    inputs = torch.ones([1, args.single_obs_num * args.frame_stack])
+    normalized_inputs = obs_normalizer(inputs)
+    actions = actor_critic.actor(normalized_inputs)
+
+    print("inputs:", inputs[0, -args.single_obs_num:])
+    print("normalized_inputs:", normalized_inputs[0, -args.single_obs_num:])
+    print("normalizer mean:", obs_normalizer.mean[-args.single_obs_num:])
+    print("normalizer std:", obs_normalizer.std[-args.single_obs_num:])
+    print("actions:", actions[0])
+
+    onnx_path = args.path.replace('.pt', '.onnx')
+    policy = torch.nn.Sequential(obs_normalizer, actor_critic.actor)
+    torch.onnx.export(policy, inputs, onnx_path)
+
+    ort_session = onnxruntime.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+    input_name = ort_session.get_inputs()[0].name
+    actions_np = ort_session.run(None, {
+        input_name: np.ones([1, args.single_obs_num * args.frame_stack], dtype=np.float32)
+    })[0]
+    print("actions_np:", actions_np[0])
+
+    assert np.allclose(actions_np, actions.detach().numpy())
+

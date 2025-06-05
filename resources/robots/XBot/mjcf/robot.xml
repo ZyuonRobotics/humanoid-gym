@@ -92,7 +92,7 @@
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
   </asset>
   <worldbody>
-    <body name="base_link" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
+    <body name="base_link" pos="0.0 0.0 0." quat="1.0 0.0 0.0 0.0">
       <inertial mass="29.9006" pos="-0.0140733 -0.000171442 0.0993701" quat="0.9982841189712012 -0.0010789501285846 0.0585460069772609 0.0001369070163159" diaginertia="1.7454 1.09845 0.735973" />
       <joint name="dummy_to_base_link" type="free" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="0.0 0.0" damping="0.0" stiffness="0.0" armature="0.0" frictionloss="0.0" />
       <geom type="mesh" mesh="base_link" contype="0" conaffinity="0" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
@@ -235,11 +235,11 @@
               <geom type="mesh" mesh="left_ankle_pitch_linkage2_link" contype="0" conaffinity="0" pos="-0.0265236 -0.132193 0.023" quat="0.6939 0.0 0.0 -0.720071" rgba="0.75294 0.75294 0.75294 1.0" />
               <body name="left_ankle_pitch_link" pos="0.0 -0.32 0.0" quat="-3.54803852776036e-06 0.9659255991943306 0.2588198926040677 -9.506976055131054e-07">
                 <inertial mass="0.043455" pos="-7.8974e-09 3.999e-08 0.0" quat="0.0 0.7071067811865475 0.0 0.7071067811865475" diaginertia="6.7102e-06 6.4906e-06 1.2169e-06" />
-                <joint name="left_ankle_pitch_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.7 0.87" damping="0.0" stiffness="0.0" armature="0.0" frictionloss="0.1" />
+                <joint name="left_ankle_pitch_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.7 0.87" damping="0.0" stiffness="0.0" armature="0.05" frictionloss="0.1" />
                 <geom type="mesh" mesh="left_ankle_pitch_link" contype="0" conaffinity="0" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
                 <body name="left_ankle_roll_link" pos="0.0 0.0 0.0" quat="-2.59734103282963e-06 0.7071082811807827 2.5973510328336063e-06 0.7071052811795897">
                   <inertial mass="0.343495" pos="-1.12265e-06 -0.0335772 0.0258065" quat="0.7070898165791432 0.0049061987273198 -0.0048899687315299 0.7070898165791432" diaginertia="0.000936831 0.000849235 0.000127719" />
-                  <joint name="left_ankle_roll_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.44 0.44" damping="0.0" stiffness="0.0" armature="0.0" frictionloss="0.1" />
+                  <joint name="left_ankle_roll_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.44 0.44" damping="0.0" stiffness="0.0" armature="0.05" frictionloss="0.1" />
                   <geom type="mesh" mesh="left_ankle_roll_link" contype="0" conaffinity="0" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
                   <geom type="mesh" mesh="left_ankle_roll_link" contype="1" conaffinity="1" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
                   <geom type="mesh" mesh="left_foot_ee_link" contype="0" conaffinity="0" pos="0.0 -0.056 0.0" quat="0.499998 -0.5 -0.5 -0.500002" rgba="0.75294 0.75294 0.75294 1.0" />
@@ -275,11 +275,11 @@
               <geom type="mesh" mesh="right_ankle_pitch_linkage2_link" contype="0" conaffinity="0" pos="-0.0265236 0.132193 0.023" quat="0.693904 0.0 0.0 0.720068" rgba="0.75294 0.75294 0.75294 1.0" />
               <body name="right_ankle_pitch_link" pos="0.0 0.32 0.0" quat="-3.54803852776036e-06 0.9659255991943306 -0.2588198926040677 9.506976055131054e-07">
                 <inertial mass="0.099" pos="0.0 0.0 0.0" quat="0.5 0.5 0.5 0.5" diaginertia="1.89085e-05 1.89085e-05 4.40457e-06" />
-                <joint name="right_ankle_pitch_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.87 0.7" damping="0.0" stiffness="0.0" armature="0.0" frictionloss="0.1" />
+                <joint name="right_ankle_pitch_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.87 0.7" damping="0.0" stiffness="0.0" armature="0.05" frictionloss="0.1" />
                 <geom type="mesh" mesh="right_ankle_pitch_link" contype="0" conaffinity="0" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.752941 0.752941 0.752941 1.0" />
                 <body name="right_ankle_roll_link" pos="0.0 0.0 0.0" quat="0.7071052811843601 0.0 0.707108281185553 0.0">
                   <inertial mass="0.343505" pos="0.000662319 -0.0335772 0.0258065" quat="0.7169232058944092 0.0018995105455237 -0.0079525322839014 0.6971042002025547" diaginertia="0.000990197 0.000849186 0.000180894" />
-                  <joint name="right_ankle_roll_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.44 0.44" damping="0.0" stiffness="0.0" armature="0.0" frictionloss="0.1" />
+                  <joint name="right_ankle_roll_joint" type="hinge" pos="0.0 0.0 0.0" axis="0.0 0.0 1.0" range="-0.44 0.44" damping="0.0" stiffness="0.0" armature="0.05" frictionloss="0.1" />
                   <geom type="mesh" mesh="right_ankle_roll_link" contype="0" conaffinity="0" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
                   <geom type="mesh" mesh="right_ankle_roll_link" contype="1" conaffinity="1" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0" rgba="0.75294 0.75294 0.75294 1.0" />
                   <geom type="mesh" mesh="right_foot_ee_link" contype="0" conaffinity="0" pos="0.0 -0.056 0.0" quat="0.499998 -0.5 -0.5 -0.500002" rgba="0.75294 0.75294 0.75294 1.0" />

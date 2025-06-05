@@ -49,5 +49,7 @@ setup(
                       'opencv-python',
                       'mujoco==2.3.6',
                       'mujoco-python-viewer',
-                      'matplotlib']
+                      'matplotlib',
+                      'onnx',
+                      'onnxruntime']
 )

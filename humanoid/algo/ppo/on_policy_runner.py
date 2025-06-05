@@ -323,7 +323,7 @@ class OnPolicyRunner:
         if self.cfg["empirical_normalization"]:
             if device is not None:
                 self.obs_normalizer.to(device)
-            policy = lambda x: self.alg.actor_critic.act_inference(self.obs_normalizer(x))  # noqa: E731
+            policy = torch.nn.Sequential(self.obs_normalizer, self.alg.actor_critic.actor).to(device)
         return policy
 
     def get_inference_critic(self, device=None):

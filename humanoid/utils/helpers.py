@@ -128,7 +128,7 @@ def get_load_path(root, load_run=-1, checkpoint=-1):
     else:
         load_run = os.path.join(root, load_run)
     if checkpoint == -1:
-        models = [file for file in os.listdir(load_run) if "model" in file]
+        models = [file for file in os.listdir(load_run) if "model" in file and file.endswith(".pt")]
         models.sort(key=lambda m: "{0:0>15}".format(m))
         model = models[-1]
     else:
@@ -245,9 +245,9 @@ def get_args():
     return args
 
 
-def export_policy_as_jit(actor_critic, path):
+def export_policy_as_jit(policy, path):
     os.makedirs(path, exist_ok=True)
     path = os.path.join(path, "policy_1.pt")
-    model = copy.deepcopy(actor_critic.actor).to("cpu")
+    model = copy.deepcopy(policy).to("cpu")
     traced_script_module = torch.jit.script(model)
     traced_script_module.save(path)
