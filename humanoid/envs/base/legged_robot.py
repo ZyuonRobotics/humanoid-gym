@@ -586,14 +586,10 @@ class LeggedRobot(BaseTask):
         self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
 
     def fix_dof_props_asset(self, props):
-        import mujoco
-        xml_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
-        model = mujoco.MjModel.from_xml_path(xml_path)
-
-        jnt_range = torch.from_numpy(model.jnt_range).to(self.device).to(torch.float32)
-        jnt_stiffness = torch.from_numpy(model.jnt_stiffness).to(self.device).to(torch.float32)
-        dof_frictionloss = torch.from_numpy(model.dof_frictionloss).to(self.device).to(torch.float32)
-        actuator_ctrlrange = torch.from_numpy(model.actuator_ctrlrange).to(self.device)
+        jnt_range = torch.from_numpy(self.mujoco_model.jnt_range).to(self.device).to(torch.float32)
+        jnt_stiffness = torch.from_numpy(self.mujoco_model.jnt_stiffness).to(self.device).to(torch.float32)
+        dof_frictionloss = torch.from_numpy(self.mujoco_model.dof_frictionloss).to(self.device).to(torch.float32)
+        actuator_ctrlrange = torch.from_numpy(self.mujoco_model.actuator_ctrlrange).to(self.device)
         for i in range(len(props)):
             props["lower"][i] = jnt_range[i+1, 0]
             props["upper"][i] = jnt_range[i+1, 1]
@@ -602,6 +598,12 @@ class LeggedRobot(BaseTask):
             assert abs(actuator_ctrlrange[i, 0]) == abs(actuator_ctrlrange[i, 1])
             props["effort"][i] = abs(actuator_ctrlrange[i, 0])
         return props
+
+    def get_dof_axis(self):
+        if self.asset_type == "mjcf":
+            return torch.from_numpy(self.mujoco_model.jnt_axis[1:]).to(device=self.device)
+        else:
+            raise NotImplementedError
 
     def _create_envs(self):
         """ Creates environments:
@@ -616,8 +618,12 @@ class LeggedRobot(BaseTask):
         xml_root = ET.parse(asset_path).getroot()
         if xml_root.tag == "mujoco":
             self.asset_type = "mjcf"
+            import mujoco
+            xml_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
+            self.mujoco_model = mujoco.MjModel.from_xml_path(xml_path)
         else:
             self.asset_type = "urdf"
+            self.mujoco_model = None
         asset_root = os.path.dirname(asset_path)
         asset_file = os.path.basename(asset_path)
 
