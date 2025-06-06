@@ -53,6 +53,9 @@ class PPO:
                  schedule="fixed",
                  desired_kl=0.01,
                  device='cpu',
+                 get_symm_obs=None,
+                 get_symm_action=None,
+                 symm_loss_coef=0.,
                  ):
 
         self.device = device
@@ -78,6 +81,10 @@ class PPO:
         self.lam = lam
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
+
+        self.get_symm_obs = get_symm_obs
+        self.get_symm_action = get_symm_action
+        self.symm_loss_coef = symm_loss_coef
 
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape):
         self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape, self.device)
@@ -119,6 +126,7 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
+        mean_symm_loss = 0
 
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         for obs_batch, critic_obs_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
@@ -165,7 +173,14 @@ class PPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+                if self.get_symm_obs is not None and self.get_symm_action is not None:
+                    symm_obs = self.get_symm_obs(obs_batch)
+                    symm_act = self.get_symm_action(self.actor_critic.act_inference(symm_obs))
+                    symm_loss = (symm_act - mu_batch).pow(2).mean()
+                else:
+                    symm_loss = 0
+
+                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + self.symm_loss_coef * symm_loss
 
                 # Gradient step
                 self.optimizer.zero_grad()
@@ -175,10 +190,12 @@ class PPO:
 
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
+                mean_symm_loss += symm_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        mean_symm_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss
+        return mean_value_loss, mean_surrogate_loss, mean_symm_loss

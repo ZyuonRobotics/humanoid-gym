@@ -202,6 +202,47 @@ class XBotLFreeEnv(LeggedRobot):
         else:
             raise NotImplemented
 
+    def get_symm_dof(self, value):
+        # roll, yaw, pitch, pitch, pitch, roll
+        value = torch.roll(value, shifts=6, dims=-1)
+        value[:, [0, 1, 5, 6, 7, 11]] *= -1
+        return value
+
+    def get_single_symm_obs(self, name, value):
+        res = value.clone()
+        if name in ["dof_pos", "dof_vel", "actions"]:
+            res = self.get_symm_dof(res)
+        elif name.startswith("base_euler"):
+            axis = list(name.lower().split("_")[-1])
+            assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
+            for idx, ax in enumerate(axis):
+                if ax in ["x", "z"]:
+                    res[:, idx] *= -1
+        elif name == "command_input":
+            res[:, [0, 1, 3, 4]] *= -1
+        elif name == "base_lin_vel":
+            res[:, 1] *= -1
+        elif name == "base_ang_vel":
+            res[:, [0, 2]] *= -1
+        else:
+            raise NotImplemented
+        return res
+
+    def get_symm_obs(self, batch_obs):
+        assert len(batch_obs.shape) == 2 and batch_obs.shape[1] == self.num_obs
+        batch_size = batch_obs.shape[0]
+        symm_obs = batch_obs.clone().reshape(batch_size * self.cfg.env.frame_stack, self.cfg.env.num_single_obs)
+        idx = 0
+        for name in self.cfg.env.obs_names:
+            dim = self.cfg.env.get_obs_dim(name)
+            symm_obs[:, idx:idx + dim] = self.get_single_symm_obs(name, symm_obs[:, idx:idx + dim])
+            idx += dim
+        return symm_obs.reshape(batch_size, self.num_obs)
+
+    def get_symm_action(self, batch_action):
+        assert len(batch_action.shape) == 2 and batch_action.shape[1] == self.num_actions
+        return self.get_symm_dof(batch_action.clone())
+
     def get_obs_noise(self, name):
         if name in ["command_input", "actions"]:
             return torch.zeros((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device)
