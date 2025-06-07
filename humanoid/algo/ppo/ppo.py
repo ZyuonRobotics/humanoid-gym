@@ -40,6 +40,7 @@ class PPO:
     actor_critic: ActorCritic
     def __init__(self,
                  actor_critic,
+                 obs_normalizer,
                  num_learning_epochs=1,
                  num_mini_batches=1,
                  clip_param=0.2,
@@ -67,6 +68,8 @@ class PPO:
         # PPO components
         self.actor_critic = actor_critic
         self.actor_critic.to(self.device)
+        self.obs_normalizer = obs_normalizer
+        self.obs_normalizer.to(self.device)
         self.storage = None # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
@@ -174,7 +177,11 @@ class PPO:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
                 if self.get_symm_obs is not None and self.get_symm_action is not None:
-                    symm_obs = self.get_symm_obs(obs_batch)
+                    is_training = self.obs_normalizer.training
+                    self.obs_normalizer.eval()
+                    symm_obs = self.obs_normalizer(self.get_symm_obs(self.obs_normalizer.inverse(obs_batch)))
+                    if is_training:
+                        self.obs_normalizer.train()
                     symm_act = self.get_symm_action(self.actor_critic.act_inference(symm_obs))
                     symm_loss = (symm_act - mu_batch).pow(2).mean()
                 else:

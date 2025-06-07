@@ -69,22 +69,26 @@ class OnPolicyRunner:
             self.env.num_obs, num_critic_obs, self.env.num_actions, **self.policy_cfg
         ).to(self.device)
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
+
+        self.empirical_normalization = self.cfg["empirical_normalization"]
+        if self.empirical_normalization:
+            self.obs_normalizer = EmpiricalNormalization(
+                shape=(self.env.num_obs,), until=int(1.0e8)
+            ).to(self.device)
+            self.privileged_obs_normalizer = EmpiricalNormalization(
+                shape=(self.env.num_privileged_obs,),until=int(1.0e8)
+            ).to(self.device)
+        else:
+            self.obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
+            self.privileged_obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
+
         self.alg: PPO = alg_class(
-            actor_critic, device=self.device, **self.alg_cfg,
+            actor_critic, self.obs_normalizer, device=self.device, **self.alg_cfg,
             get_symm_obs=self.env.get_symm_obs if hasattr(self.env, "get_symm_obs") else None,
             get_symm_action=self.env.get_symm_action if hasattr(self.env, "get_symm_action") else None,
         )
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
-        self.empirical_normalization = self.cfg["empirical_normalization"]
-        if self.empirical_normalization:
-            self.obs_normalizer = EmpiricalNormalization(shape=[self.env.num_obs], until=1.0e8).to(self.device)
-            self.privileged_obs_normalizer = EmpiricalNormalization(shape=[self.env.num_privileged_obs], until=1.0e8).to(
-                self.device
-            )
-        else:
-            self.obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
-            self.privileged_obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
 
         # init storage and model
         self.alg.init_storage(
