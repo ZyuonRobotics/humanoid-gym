@@ -10,6 +10,7 @@ import mujoco
 import mujoco.viewer
 import onnxruntime
 from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as plt
 
 BASE_PATH = path.dirname(path.dirname(path.dirname(__file__)))
 KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "XBot", "mjcf", "robot.xml")
@@ -40,7 +41,8 @@ class PlayMujoco:
             d_gains=None,
             default_height=DEFAULT_HEIGHT,
             default_dof_pos=None,
-            input_list=None
+            input_list=None,
+            longest_time_s=None
     ):
         self.onnx_path = onnx_path
         self.change_period = change_period
@@ -54,6 +56,7 @@ class PlayMujoco:
         self.default_height = default_height
         self.default_dof_pos = np.array(DEFAULT_JOINT_POS) if default_dof_pos is None else default_dof_pos
         self.input_list = input_list if input_list is not None else INPUT_LIST
+        self.longest_time_s = longest_time_s
 
         self.input_info = {}
         for i, name in enumerate(self.input_list):
@@ -86,10 +89,15 @@ class PlayMujoco:
         self.pre_action = np.zeros(dof_num)
         self.base_lin_acc = np.zeros(3)
 
-        self.vel_x, self.vel_y, self.vel_yaw = 0.0, 0, 0
+        self.vel_x, self.vel_y, self.vel_yaw = 0.0, 0.0, 0.0
         self.standing = 0
 
         self.actions = np.zeros(dof_num)
+
+        self.qpos_list = []
+        self.qvel_list = []
+        self.action_list = []
+        self.torque_list = []
 
     def change_command(self, x, y, yaw):
         pre_period_length = self.period_length()
@@ -164,7 +172,7 @@ class PlayMujoco:
         dof_pos = self.data.qpos[7:]
         dof_vel = self.data.qvel[6:]
 
-        quat = self.data.qpos[3:7][[1, 2, 3, 0]]
+        quat = self.data.qpos[[4, 5, 6, 3]]
         r = Rotation.from_quat(quat)
         base_euler_xyz = r.as_euler("xyz")
         base_ang_vel = self.data.qvel[3:6]
@@ -179,10 +187,6 @@ class PlayMujoco:
 
     def play(self, stdscr):
         curses.curs_set(0)
-
-        dof_pos_list = []
-        torque_list = []
-        acc_list = []
 
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             while viewer.is_running():
@@ -206,11 +210,58 @@ class PlayMujoco:
                 time.sleep(max(0, 0.01 - (end_time - start_time)))
                 self.pre_action = self.actions.copy()
 
-                dof_pos_list.append(self.data.qpos[7:].copy())
-                torque_list.append(self.actions.copy())
-                acc_list.append(self.base_lin_acc.copy())
+                self.qpos_list.append(self.data.qpos.copy())
+                self.qvel_list.append(self.data.qvel.copy())
+                self.action_list.append(self.actions.copy())
+                self.torque_list.append(self.torque.copy())
 
                 self.time_s += 0.01
+
+                if self.longest_time_s is not None and self.time_s > self.longest_time_s:
+                    break
+
+    def draw_dof_pos(self, dims, draw_action=True):
+        dof_pos = np.array(self.qpos_list)[:, 7:]
+        action = np.array(self.action_list) * 0.25
+        for dim in dims:
+            plt.plot(dof_pos[:, dim], label=f"pos_{dim}")
+            if draw_action:
+                plt.plot(action[:, dim], label=f"action_{dim}")
+        plt.legend()
+        plt.show()
+
+    def draw_dof_vel(self, dims, draw_action=False):
+        dof_vel = np.array(self.qvel_list)[:, 6:]
+        action = np.array(self.action_list) * 0.25
+        for dim in dims:
+            plt.plot(dof_vel[:, dim], label=f"vel_{dim}")
+            if draw_action and dim >= 6:
+                plt.plot(action[:, dim], label=f"action_{dim}")
+        plt.legend()
+        plt.show()
+
+    def draw_euler(self):
+        quat = np.array(self.qpos_list)[:, [4, 5, 6, 3]]
+        r = Rotation.from_quat(quat)
+        base_euler_xyz = r.as_euler("xyz")
+        for idx, dim in enumerate(['x', 'y', 'z']):
+            plt.plot(base_euler_xyz[:, idx], label=f"euler_{dim}")
+        plt.legend()
+        plt.show()
+
+    def draw_ang_vel(self):
+        ang_vel = np.array(self.qvel_list)[:, 3:6]
+        for idx, dim in enumerate(['x', 'y', 'z']):
+            plt.plot(ang_vel[:, idx], label=f"euler_{dim}")
+        plt.legend()
+        plt.show()
+
+    def draw_torque(self, dims):
+        torque = np.array(self.torque_list)
+        for dim in dims:
+            plt.plot(torque[:, dim], label=f"torque_{dim}")
+        plt.legend()
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -220,6 +271,15 @@ if __name__ == '__main__':
 
     change_period = "amass" in args.onnx_path
 
-    play_mujoco = PlayMujoco(onnx_path=args.onnx_path, change_period=change_period)
-    curses.wrapper(play_mujoco.play)
-    # play_mujoco.play(None)
+    play_mujoco = PlayMujoco(
+        onnx_path=args.onnx_path,
+        change_period=change_period,
+        longest_time_s=100000
+    )
+    # curses.wrapper(play_mujoco.play)
+    play_mujoco.play(None)
+
+    play_mujoco.draw_dof_pos([1], draw_action=True)
+    # play_mujoco.draw_dof_vel([4])
+    # play_mujoco.draw_torque([4])
+    # # play_mujoco.draw_ang_vel()

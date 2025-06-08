@@ -60,8 +60,9 @@ class Logger:
         self.rew_log.clear()
 
     def plot_states(self):
-        self.plot_process = Process(target=self._plot)
-        self.plot_process.start()
+        self._plot()
+        # self.plot_process = Process(target=self._plot)
+        # self.plot_process.start()
 
     def _plot(self):
         nb_rows = 3

@@ -37,7 +37,7 @@ from humanoid import LEGGED_GYM_ROOT_DIR
 
 # import isaacgym
 from humanoid.envs import *
-from humanoid.utils import  get_args, export_policy_as_jit, task_registry, Logger
+from humanoid.utils import  get_args, export_policy_as_jit, task_registry, Logger, helpers
 from isaacgym.torch_utils import *
 
 import torch
@@ -111,6 +111,10 @@ def play(args):
         if not os.path.exists(experiment_dir):
             os.mkdir(experiment_dir)
         video = cv2.VideoWriter(dir, fourcc, 50.0, (1920, 1080))
+    if RECORD_DATA:
+        qpos_np = np.zeros((stop_state_log, 7 + env.num_dof))
+        qvel_np = np.zeros((stop_state_log, 6 + env.num_dof))
+        action_np = np.zeros((stop_state_log, env.num_dof))
 
     for i in tqdm(range(stop_state_log)):
 
@@ -121,6 +125,18 @@ def play(args):
             env.commands[:, 1] = 0.
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
+        if RECORD_DATA:
+            qpos_np[i] = np.concatenate([
+                env.root_states[robot_index, :3].cpu().numpy(),
+                env.root_states[robot_index, [6, 3, 4, 5]].cpu().numpy(),
+                env.dof_pos[robot_index].cpu().numpy(),
+            ])
+            qvel_np[i] = np.concatenate([
+                env.root_states[robot_index, 7:10].cpu().numpy(), # lin vel should be global
+                env.base_ang_vel[robot_index].cpu().numpy(),
+                env.dof_vel[robot_index].cpu().numpy(),
+            ])
+            action_np[i] = actions.detach()[robot_index].cpu().numpy()
 
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
 
@@ -160,10 +176,18 @@ def play(args):
     
     if RENDER:
         video.release()
+    if RECORD_DATA:
+        npz_path = helpers.get_load_path(
+            root=os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name),
+            load_run=train_cfg.runner.load_run,
+            checkpoint=train_cfg.runner.checkpoint
+        ).replace(".pt", ".npz")
+        np.savez(npz_path, qpos=qpos_np, qvel=qvel_np, action=action_np)
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
     FIX_COMMAND = True
+    RECORD_DATA = True
     args = get_args()
     play(args)
