@@ -597,6 +597,7 @@ class LeggedRobot(BaseTask):
             props["friction"][i] = dof_frictionloss[i+6]
             assert abs(actuator_ctrlrange[i, 0]) == abs(actuator_ctrlrange[i, 1])
             props["effort"][i] = abs(actuator_ctrlrange[i, 0])
+            props["velocity"][i] = 12
         return props
 
     def get_dof_axis(self):

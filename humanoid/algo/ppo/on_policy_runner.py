@@ -38,7 +38,7 @@ from collections import deque
 from datetime import datetime
 from .ppo import PPO
 from .actor_critic import ActorCritic
-from .normalizer import EmpiricalNormalization
+from .normalizer import EmpiricalNormalization, NoNormalization
 from humanoid.algo.vec_env import VecEnv
 from torch.utils.tensorboard import SummaryWriter
 
@@ -79,8 +79,8 @@ class OnPolicyRunner:
                 shape=(self.env.num_privileged_obs,),until=int(1.0e8)
             ).to(self.device)
         else:
-            self.obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
-            self.privileged_obs_normalizer = torch.nn.Identity().to(self.device)  # no normalization
+            self.obs_normalizer = NoNormalization().to(self.device)  # no normalization
+            self.privileged_obs_normalizer = NoNormalization().to(self.device)  # no normalization
 
         self.alg: PPO = alg_class(
             actor_critic, self.obs_normalizer, device=self.device, **self.alg_cfg,
@@ -332,7 +332,7 @@ class OnPolicyRunner:
         self.eval_mode()  # switch to evaluation mode (dropout for example)
         if device is not None:
             self.alg.actor_critic.to(device)
-        policy = self.alg.actor_critic.act_inference
+        policy = self.alg.actor_critic.actor
         if self.cfg["empirical_normalization"]:
             if device is not None:
                 self.obs_normalizer.to(device)

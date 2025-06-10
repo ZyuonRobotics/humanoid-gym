@@ -75,6 +75,16 @@ class EmpiricalNormalization(nn.Module):
     def inverse(self, y):
         return y * (self._std + self.eps) + self._mean
 
+class NoNormalization(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+    def inverse(self, x):
+        return x
+
 
 class EmpiricalDiscountedVariationNormalization(nn.Module):
     """Reward normalization from Pathak's large scale study on PPO.

@@ -176,7 +176,7 @@ class PPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                if self.get_symm_obs is not None and self.get_symm_action is not None:
+                if self.get_symm_obs is not None and self.get_symm_action is not None and self.symm_loss_coef > 0:
                     is_training = self.obs_normalizer.training
                     self.obs_normalizer.eval()
                     symm_obs = self.obs_normalizer(self.get_symm_obs(self.obs_normalizer.inverse(obs_batch)))
@@ -185,7 +185,7 @@ class PPO:
                     symm_act = self.get_symm_action(self.actor_critic.act_inference(symm_obs))
                     symm_loss = (symm_act - mu_batch).pow(2).mean()
                 else:
-                    symm_loss = 0
+                    symm_loss = torch.zeros(1, device=self.device)
 
                 loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + self.symm_loss_coef * symm_loss
 

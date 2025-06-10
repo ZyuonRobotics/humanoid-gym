@@ -142,6 +142,8 @@ if __name__ == '__main__':
     parser.add_argument("--c_frame_stack", default=3, type=int)
 
     args = parser.parse_args()
+    state_dict = torch.load(args.path, weights_only=True)
+    normalized = "obs_norm_state_dict" in state_dict
 
     actor_critic = ActorCritic(
         args.single_obs_num * args.frame_stack,
@@ -150,27 +152,32 @@ if __name__ == '__main__':
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[768, 256, 128],
     )
-    obs_normalizer = EmpiricalNormalization(shape=(args.single_obs_num * args.frame_stack), until=int(1.0e8))
-    actor_critic.eval()
-    obs_normalizer.eval()
-
-    state_dict = torch.load(args.path, weights_only=True)
-
     actor_critic.load_state_dict(state_dict["model_state_dict"])
-    obs_normalizer.load_state_dict(state_dict["obs_norm_state_dict"])
+    actor_critic.eval()
+
+    if normalized:
+        obs_normalizer = EmpiricalNormalization(shape=(args.single_obs_num * args.frame_stack), until=int(1.0e8))
+        obs_normalizer.load_state_dict(state_dict["obs_norm_state_dict"])
+        print("normalizer mean:", obs_normalizer.mean[-args.single_obs_num:])
+        print("normalizer std:", obs_normalizer.std[-args.single_obs_num:])
+        obs_normalizer.eval()
+        policy = torch.nn.Sequential(obs_normalizer, actor_critic.actor)
+    else:
+        obs_normalizer = None
+        policy = actor_critic.actor
 
     inputs = torch.ones([1, args.single_obs_num * args.frame_stack])
-    normalized_inputs = obs_normalizer(inputs)
+    if normalized:
+        normalized_inputs = obs_normalizer(inputs)
+    else:
+        normalized_inputs = inputs
     actions = actor_critic.actor(normalized_inputs)
 
     print("inputs:", inputs[0, -args.single_obs_num:])
     print("normalized_inputs:", normalized_inputs[0, -args.single_obs_num:])
-    print("normalizer mean:", obs_normalizer.mean[-args.single_obs_num:])
-    print("normalizer std:", obs_normalizer.std[-args.single_obs_num:])
     print("actions:", actions[0])
 
     onnx_path = args.path.replace('.pt', '.onnx')
-    policy = torch.nn.Sequential(obs_normalizer, actor_critic.actor)
     torch.onnx.export(policy, inputs, onnx_path)
 
     ort_session = onnxruntime.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
