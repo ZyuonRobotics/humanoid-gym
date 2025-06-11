@@ -172,36 +172,6 @@ class XBotLFreeEnv(LeggedRobot):
         actions = (1 - delay) * actions + delay * self.actions
         actions += self.cfg.domain_rand.action_noise * torch.randn_like(actions) * actions
         return super().step(actions)
-
-    def get_obs(self, name):
-        if name in [
-            "dof_pos", "dof_vel", "actions",
-            "base_lin_vel", "base_ang_vel",
-            "rand_push_force", "rand_push_torque", "env_frictions", "body_mass"
-        ]:
-            return getattr(self, name)
-        elif name.startswith("base_euler"):
-            axis = list(name.lower().split("_")[-1])
-            assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
-            index = ["xyz".index(ax) for ax in axis]
-            return self.base_euler_xyz[:, index]
-        elif name == "command_input":
-            phase = self._get_phase()
-            sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
-            cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
-            return torch.cat((sin_pos, cos_pos, self.commands[:, :3]), dim=1)
-        elif name == "stance_mask":
-            return self._get_gait_phase()
-        elif name == "contact_mask":
-            return self.contact_forces[:, self.feet_indices, 2] > 5.
-        elif name == "target_dof_pos":
-            self.compute_ref_state()
-            return self.ref_dof_pos
-        elif name == "measure_heights":
-            return torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.)
-        else:
-            raise NotImplemented
-
     def get_symm_dof(self, value):
         # roll, yaw, pitch, pitch, pitch, roll
         value = torch.roll(value, shifts=6, dims=-1)

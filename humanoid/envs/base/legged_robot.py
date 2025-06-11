@@ -256,22 +256,12 @@ class LeggedRobot(BaseTask):
         Returns:
             [List[gymapi.RigidShapeProperties]]: Modified rigid shape properties
         """
-        if self.cfg.domain_rand.randomize_friction:
-            if env_id==0:
-                # prepare friction randomization
-                friction_range = self.cfg.domain_rand.friction_range
-                num_buckets = 256
-                bucket_ids = torch.randint(0, num_buckets, (self.num_envs, 1))
-                friction_buckets = torch_rand_float(friction_range[0], friction_range[1], (num_buckets,1), device='cpu')
-                self.friction_coeffs = friction_buckets[bucket_ids]
-
-            for s in range(len(props)):
+        for s in range(len(props)):
+            if self.cfg.domain_rand.randomize_friction:
                 props[s].friction = self.friction_coeffs[env_id]
-
-            self.env_frictions[env_id] = self.friction_coeffs[env_id]
+            if self.cfg.domain_rand.randomize_restitution:
+                props[s].restitution = self.restitution_coeffs[env_id]
         return props
-    
-
     def _process_dof_props(self, props, env_id):
         """ Callback allowing to store/change/randomize the DOF properties of each environment.
             Called During environment creation.
@@ -288,19 +278,35 @@ class LeggedRobot(BaseTask):
             self.dof_pos_limits = torch.zeros(self.num_dof, 2, dtype=torch.float, device=self.device, requires_grad=False)
             self.dof_vel_limits = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
             self.torque_limits = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+            self.original_friction = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+            self.original_armature = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
             for i in range(len(props)):
                 self.dof_pos_limits[i, 0] = props["lower"][i].item() * self.cfg.safety.pos_limit
                 self.dof_pos_limits[i, 1] = props["upper"][i].item() * self.cfg.safety.pos_limit
                 self.dof_vel_limits[i] = props["velocity"][i].item() * self.cfg.safety.vel_limit
                 self.torque_limits[i] = props["effort"][i].item() * self.cfg.safety.torque_limit
+                self.original_friction[i] = props["friction"][i].item()
+                self.original_armature[i] = props["armature"][i].item()
+
+        for i in range(len(props)):
+            if self.cfg.domain_rand.randomize_joint_friction:
+                props["friction"][i] = (self.original_friction[i] * self.joint_friction_coeffs[env_id, i]).item()
+            if self.cfg.domain_rand.randomize_joint_armature:
+                props["armature"][i] = (self.original_armature[i] * self.joint_armature_coeffs[env_id, i]).item()
         return props
 
     def _process_rigid_body_props(self, props, env_id):
-        # randomize base mass
+        if env_id==0:
+            self.original_base_mass = props[0].mass
+            self.original_base_com = [props[0].com.x, props[0].com.y, props[0].com.z]
         if self.cfg.domain_rand.randomize_base_mass:
-            rng = self.cfg.domain_rand.added_mass_range
-            props[0].mass += np.random.uniform(rng[0], rng[1])
-        self.body_mass[env_id] = props[0].mass
+            props[0].mass = self.original_base_mass + self.base_mass_coeffs[env_id].item()
+        if self.cfg.domain_rand.randomize_com_displacement:
+            props[0].com = gymapi.Vec3(
+                self.original_base_com[0] + self.base_com_coeffs[env_id, 0].item(),
+                self.original_base_com[1] + self.base_com_coeffs[env_id, 1].item(),
+                self.original_base_com[2] + self.base_com_coeffs[env_id, 2].item()
+            )
         return props
     
     def _post_physics_step_callback(self):
@@ -352,8 +358,8 @@ class LeggedRobot(BaseTask):
         """
         # pd controller
         actions_scaled = actions * self.cfg.control.action_scale
-        p_gains = self.p_gains
-        d_gains = self.d_gains
+        p_gains = self.p_gains * self.joint_kp_coeffs
+        d_gains = self.d_gains * self.joint_kd_coeffs
         torques = p_gains * (actions_scaled + self.default_dof_pos - self.dof_pos) - d_gains * self.dof_vel
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
@@ -606,6 +612,89 @@ class LeggedRobot(BaseTask):
         else:
             raise NotImplementedError
 
+    def get_obs(self, name):
+        if name == "dof_pos":
+            return self.dof_pos + self.joint_pos_biases
+        elif name in [
+            "dof_vel", "actions",
+            "base_lin_vel", "base_ang_vel",
+            "rand_push_force", "rand_push_torque",
+            "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
+            "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
+            "joint_kp_coeffs", "joint_kd_coeffs"
+        ]:
+            assert len(getattr(self, name).shape) == 2, (
+                f"Observation shape must be (num_envs, num_obs), but {name} is {getattr(self, name).shape}"
+            )
+            return getattr(self, name)
+        elif name.startswith("base_euler"):
+            axis = list(name.lower().split("_")[-1])
+            assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
+            index = ["xyz".index(ax) for ax in axis]
+            return self.base_euler_xyz[:, index]
+        elif name == "command_input":
+            phase = self._get_phase()
+            sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
+            cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
+            return torch.cat((sin_pos, cos_pos, self.commands[:, :3]), dim=1)
+        elif name == "stance_mask":
+            return self._get_gait_phase()
+        elif name == "contact_mask":
+            return self.contact_forces[:, self.feet_indices, 2] > 5.
+        elif name == "target_dof_pos":
+            self.compute_ref_state()
+            return self.ref_dof_pos
+        elif name == "measure_heights":
+            return torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.)
+        else:
+            raise NotImplemented
+
+    def generate_buckets_random(self, range, num=1):
+        return torch_rand_float(range[0], range[1], (self.num_envs, num), device=self.device)
+
+    def generate_tensor(self, num, value):
+        return torch.full((self.num_envs, num), value, dtype=torch.float32, device=self.device)
+
+    def init_domain_randomization(self):
+        dr = self.cfg.domain_rand
+
+        if dr.randomize_friction:
+            self.friction_coeffs = self.generate_buckets_random(dr.friction_range)
+        else:
+            self.friction_coeffs = self.generate_tensor(1, 0)
+        if dr.randomize_restitution:
+            self.restitution_coeffs = self.generate_buckets_random(dr.restitution_range)
+        else:
+            self.restitution_coeffs = self.generate_tensor(1, 0)
+        if dr.randomize_base_mass:
+            self.base_mass_coeffs = self.generate_buckets_random(dr.added_mass_range)
+        else:
+            self.base_mass_coeffs = self.generate_tensor(1, 0)
+        if dr.randomize_com_displacement:
+            self.base_com_coeffs = self.generate_buckets_random(dr.com_displacement_range, num=3)
+        else:
+            self.base_com_coeffs = self.generate_tensor(3, 0)
+        if dr.randomize_joint_friction:
+            self.joint_friction_coeffs = self.generate_buckets_random(dr.joint_friction_range, num=self.num_dof)
+        else:
+            self.joint_friction_coeffs = self.generate_tensor(self.num_dof, 1)
+        if dr.randomize_joint_armature:
+            self.joint_armature_coeffs = self.generate_buckets_random(dr.joint_armature_range, num=self.num_dof)
+        else:
+            self.joint_armature_coeffs = self.generate_tensor(self.num_dof, 1)
+        if dr.randomize_joint_pos_bias:
+            self.joint_pos_biases = self.generate_buckets_random(dr.joint_pos_bias_range, num=self.num_dof)
+        else:
+            self.joint_pos_biases = self.generate_tensor(self.num_dof, 0)
+        if dr.randomize_joint_kp:
+            self.joint_kp_coeffs = self.generate_buckets_random(dr.joint_kp_range, num=self.num_dof)
+        else:
+            self.joint_kp_coeffs = self.generate_tensor(self.num_dof, 1)
+        if dr.randomize_joint_kd:
+            self.joint_kd_coeffs = self.generate_buckets_random(dr.joint_kd_range, num=self.num_dof)
+        else:
+            self.joint_kd_coeffs = self.generate_tensor(self.num_dof, 1)
+
     def _create_envs(self):
         """ Creates environments:
              1. loads the robot URDF/MJCF asset,
@@ -675,10 +764,8 @@ class LeggedRobot(BaseTask):
         env_upper = gymapi.Vec3(0., 0., 0.)
         self.actor_handles = []
         self.envs = []
-        self.env_frictions = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device)
+        self.init_domain_randomization()
 
-        self.body_mass = torch.zeros(self.num_envs, 1, dtype=torch.float32, device=self.device, requires_grad=False)
-        
         for i in range(self.num_envs):
             # create env instance
             env_handle = self.gym.create_env(self.sim, env_lower, env_upper, int(np.sqrt(self.num_envs)))

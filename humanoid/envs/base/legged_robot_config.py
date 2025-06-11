@@ -45,7 +45,10 @@ class LeggedRobotCfg(BaseConfig):
         privileged_obs_names = [
             "command_input", "dof_pos", "dof_vel", "actions", "target_dof_pos",
             "base_lin_vel", "base_ang_vel", "base_euler_xyz", "rand_push_force", "rand_push_force",
-            "env_frictions", "body_mass", "stance_mask", "contact_mask"
+            "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
+            "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
+            "joint_kp_coeffs", "joint_kd_coeffs",
+            "stance_mask", "contact_mask"
         ]
 
         env_spacing = 3.  # not used with heightfields/trimeshes
@@ -57,13 +60,13 @@ class LeggedRobotCfg(BaseConfig):
         def get_obs_dim(self, name):
             if name == "command_input":
                 return self.num_commands
-            elif name in ["dof_pos", "dof_vel", "actions", "target_dof_pos"]:
+            elif name in ["dof_pos", "dof_vel", "actions", "target_dof_pos",
+                          "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
+                          "joint_kp_coeffs", "joint_kd_coeffs"]:
                 return self.num_active_dofs
-            elif name in ["base_lin_vel", "base_ang_vel"]:
+            elif name in ["base_lin_vel", "base_ang_vel", "rand_push_force", "rand_push_force", "base_com_coeffs"]:
                 return 3
-            elif name in ["rand_push_force", "rand_push_force"]:
-                return 3
-            elif name in ["env_frictions", "body_mass"]:
+            elif name in ["friction_coeffs", "restitution_coeffs", "base_mass_coeffs"]:
                 return 1
             elif name.startswith("base_euler"):
                 axis = list(name.lower().split("_")[-1])
@@ -72,7 +75,7 @@ class LeggedRobotCfg(BaseConfig):
             elif name in ["stance_mask", "contact_mask"]:
                 return 2
             else:
-                raise NotImplementedError
+                raise NotImplementedError(f"Observation name {name} not recognized.")
 
         @property
         def num_single_obs(self):
@@ -176,12 +179,39 @@ class LeggedRobotCfg(BaseConfig):
     class domain_rand:
         randomize_friction = True
         friction_range = [0.5, 1.25]
+
+        randomize_restitution = False
+        restitution_range = [0., 0.5]
+
         randomize_base_mass = False
         added_mass_range = [-1., 1.]
+
+        randomize_com_displacement = True
+        com_displacement_range = [-0.05, 0.05]
+
+        randomize_joint_friction = False
+        joint_friction_range = [0.5, 1.5]
+
+        randomize_joint_armature = False
+        joint_armature_range = [0.5, 1.5]
+
+        randomize_joint_pos_bias = False
+        joint_pos_bias_range = [-0.05, 0.05]
+
+        randomize_joint_kp = False
+        joint_kp_range = [0.8, 1.2]
+
+        randomize_joint_kd = False
+        joint_kd_range = [0.8, 1.2]
+
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
+        max_push_ang_vel = 0.
 
+        # dynamic randomization
+        action_delay = 0.
+        action_noise = 0.
 
     class rewards:
         class scales:

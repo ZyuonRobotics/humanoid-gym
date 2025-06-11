@@ -48,7 +48,10 @@ class XBotLCfg(LeggedRobotCfg):
         privileged_obs_names = [
             "command_input", "dof_pos", "dof_vel", "actions", "target_dof_pos",
             "base_lin_vel", "base_ang_vel", "base_euler_xyz", "rand_push_force", "rand_push_force",
-            "env_frictions", "body_mass", "stance_mask", "contact_mask"
+            "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
+            "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
+            "joint_kp_coeffs", "joint_kd_coeffs",
+            "stance_mask", "contact_mask"
         ]
 
         num_envs = 4096
@@ -157,12 +160,36 @@ class XBotLCfg(LeggedRobotCfg):
     class domain_rand:
         randomize_friction = True
         friction_range = [0.1, 2.0]
+
+        randomize_restitution = True
+        restitution_range = [0., 0.5]
+
         randomize_base_mass = True
         added_mass_range = [-5., 5.]
+
+        randomize_com_displacement = True
+        com_displacement_range = [-0.05, 0.05]
+
+        randomize_joint_friction = True
+        joint_friction_range = [0.5, 1.5]
+
+        randomize_joint_armature = True
+        joint_armature_range = [0.5, 1.5]
+
+        randomize_joint_pos_bias = True
+        joint_pos_bias_range = [-0.05, 0.05]
+
+        randomize_joint_kp = True
+        joint_kp_range = [0.8, 1.2]
+
+        randomize_joint_kd = True
+        joint_kd_range = [0.8, 1.2]
+
         push_robots = True
         push_interval_s = 4
         max_push_vel_xy = 0.2
         max_push_ang_vel = 0.4
+
         # dynamic randomization
         action_delay = 0.5
         action_noise = 0.02
