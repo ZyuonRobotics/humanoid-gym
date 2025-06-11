@@ -239,7 +239,7 @@ class XBotLCfgPPO(LeggedRobotCfgPPO):
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         entropy_coef = 0.001
-        symm_loss_coef = 0.1
+        symm_loss_coef = 0.0
         learning_rate = 1e-5
         num_learning_epochs = 2
         gamma = 0.994

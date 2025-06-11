@@ -72,10 +72,12 @@ def get_obs(data):
     '''
     q = data.qpos.astype(np.double)
     dq = data.qvel.astype(np.double)
-    quat = data.sensor('orientation').data[[1, 2, 3, 0]].astype(np.double)
+    # quat = data.sensor('orientation').data[[1, 2, 3, 0]].astype(np.double)
+    quat = data.qpos[[4, 5, 6, 3]].astype(np.double)
     r = R.from_quat(quat)
     v = r.apply(data.qvel[:3], inverse=True).astype(np.double)  # In the base frame
-    omega = data.sensor('angular-velocity').data.astype(np.double)
+    # omega = data.sensor('angular-velocity').data.astype(np.double)
+    omega = data.qvel[3:6].astype(np.double)
     gvec = r.apply(np.array([0., 0., -1.]), inverse=True).astype(np.double)
     return (q, dq, quat, v, omega, gvec)
 
@@ -149,6 +151,7 @@ def run_mujoco(policy, cfg):
 
             target_q = action * cfg.control.action_scale
 
+            viewer.render()
 
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
         # Generate PD control
@@ -158,7 +161,6 @@ def run_mujoco(policy, cfg):
         data.ctrl = tau
 
         mujoco.mj_step(model, data)
-        viewer.render()
         count_lowlevel += 1
 
     viewer.close()
@@ -180,6 +182,7 @@ if __name__ == '__main__':
                 mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L-terrain.xml'
             else:
                 mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L.xml'
+                # mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/robot.xml'
             sim_duration = 60.0
             dt = 0.001
             decimation = 10

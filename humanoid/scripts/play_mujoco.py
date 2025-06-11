@@ -186,12 +186,14 @@ class PlayMujoco:
         return obs_now
 
     def play(self, stdscr):
-        curses.curs_set(0)
+        if stdscr is not None:
+            curses.curs_set(0)
 
         with mujoco.viewer.launch_passive(self.model, self.data) as viewer:
             while viewer.is_running():
-                self.update_command(stdscr)
-                self.show_command(stdscr)
+                if stdscr is not None:
+                    self.update_command(stdscr)
+                    self.show_command(stdscr)
 
                 start_time = time.time()
                 self.act()
