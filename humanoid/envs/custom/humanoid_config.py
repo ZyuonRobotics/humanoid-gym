@@ -55,7 +55,8 @@ class XBotLCfg(LeggedRobotCfg):
         torque_limit = 0.85
 
     class asset(LeggedRobotCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/urdf/XBot-L.urdf'
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/urdf/XBot-L.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/robot.xml'
 
         name = "XBot-L"
         foot_name = "ankle_roll"
