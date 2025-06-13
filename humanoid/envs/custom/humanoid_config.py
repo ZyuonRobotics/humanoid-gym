@@ -51,7 +51,7 @@ class XBotLCfg(LeggedRobotCfg):
             "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
             "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
             "joint_kp_coeffs", "joint_kd_coeffs",
-            "stance_mask", "contact_mask"
+            "stance_mask", "contact_mask", "base_euler_bias"
         ]
 
         num_envs = 4096
@@ -184,6 +184,9 @@ class XBotLCfg(LeggedRobotCfg):
 
         randomize_joint_kd = True
         joint_kd_range = [0.8, 1.2]
+
+        randomize_base_euler_bias = True
+        base_euler_bias_range = [-0.05, 0.05]
 
         push_robots = True
         push_interval_s = 4

@@ -621,7 +621,7 @@ class LeggedRobot(BaseTask):
             "rand_push_force", "rand_push_torque",
             "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
             "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
-            "joint_kp_coeffs", "joint_kd_coeffs"
+            "joint_kp_coeffs", "joint_kd_coeffs", "base_euler_bias"
         ]:
             assert len(getattr(self, name).shape) == 2, (
                 f"Observation shape must be (num_envs, num_obs), but {name} is {getattr(self, name).shape}"
@@ -631,7 +631,7 @@ class LeggedRobot(BaseTask):
             axis = list(name.lower().split("_")[-1])
             assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
             index = ["xyz".index(ax) for ax in axis]
-            return self.base_euler_xyz[:, index]
+            return self.base_euler_xyz[:, index] + self.base_euler_bias[:, index]
         elif name == "command_input":
             phase = self._get_phase()
             sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
@@ -649,51 +649,55 @@ class LeggedRobot(BaseTask):
         else:
             raise NotImplemented
 
-    def generate_buckets_random(self, range, num=1):
+    def generate_random(self, range, num=1):
         return torch_rand_float(range[0], range[1], (self.num_envs, num), device=self.device)
 
-    def generate_tensor(self, num, value):
+    def generate_constant(self, num, value):
         return torch.full((self.num_envs, num), value, dtype=torch.float32, device=self.device)
 
     def init_domain_randomization(self):
         dr = self.cfg.domain_rand
 
         if dr.randomize_friction:
-            self.friction_coeffs = self.generate_buckets_random(dr.friction_range)
+            self.friction_coeffs = self.generate_random(dr.friction_range)
         else:
-            self.friction_coeffs = self.generate_tensor(1, 0)
+            self.friction_coeffs = self.generate_constant(1, 0)
         if dr.randomize_restitution:
-            self.restitution_coeffs = self.generate_buckets_random(dr.restitution_range)
+            self.restitution_coeffs = self.generate_random(dr.restitution_range)
         else:
-            self.restitution_coeffs = self.generate_tensor(1, 0)
+            self.restitution_coeffs = self.generate_constant(1, 0)
         if dr.randomize_base_mass:
-            self.base_mass_coeffs = self.generate_buckets_random(dr.added_mass_range)
+            self.base_mass_coeffs = self.generate_random(dr.added_mass_range)
         else:
-            self.base_mass_coeffs = self.generate_tensor(1, 0)
+            self.base_mass_coeffs = self.generate_constant(1, 0)
         if dr.randomize_com_displacement:
-            self.base_com_coeffs = self.generate_buckets_random(dr.com_displacement_range, num=3)
+            self.base_com_coeffs = self.generate_random(dr.com_displacement_range, num=3)
         else:
-            self.base_com_coeffs = self.generate_tensor(3, 0)
+            self.base_com_coeffs = self.generate_constant(3, 0)
         if dr.randomize_joint_friction:
-            self.joint_friction_coeffs = self.generate_buckets_random(dr.joint_friction_range, num=self.num_dof)
+            self.joint_friction_coeffs = self.generate_random(dr.joint_friction_range, num=self.num_dof)
         else:
-            self.joint_friction_coeffs = self.generate_tensor(self.num_dof, 1)
+            self.joint_friction_coeffs = self.generate_constant(self.num_dof, 1)
         if dr.randomize_joint_armature:
-            self.joint_armature_coeffs = self.generate_buckets_random(dr.joint_armature_range, num=self.num_dof)
+            self.joint_armature_coeffs = self.generate_random(dr.joint_armature_range, num=self.num_dof)
         else:
-            self.joint_armature_coeffs = self.generate_tensor(self.num_dof, 1)
+            self.joint_armature_coeffs = self.generate_constant(self.num_dof, 1)
         if dr.randomize_joint_pos_bias:
-            self.joint_pos_biases = self.generate_buckets_random(dr.joint_pos_bias_range, num=self.num_dof)
+            self.joint_pos_biases = self.generate_random(dr.joint_pos_bias_range, num=self.num_dof)
         else:
-            self.joint_pos_biases = self.generate_tensor(self.num_dof, 0)
+            self.joint_pos_biases = self.generate_constant(self.num_dof, 0)
         if dr.randomize_joint_kp:
-            self.joint_kp_coeffs = self.generate_buckets_random(dr.joint_kp_range, num=self.num_dof)
+            self.joint_kp_coeffs = self.generate_random(dr.joint_kp_range, num=self.num_dof)
         else:
-            self.joint_kp_coeffs = self.generate_tensor(self.num_dof, 1)
+            self.joint_kp_coeffs = self.generate_constant(self.num_dof, 1)
         if dr.randomize_joint_kd:
-            self.joint_kd_coeffs = self.generate_buckets_random(dr.joint_kd_range, num=self.num_dof)
+            self.joint_kd_coeffs = self.generate_random(dr.joint_kd_range, num=self.num_dof)
         else:
-            self.joint_kd_coeffs = self.generate_tensor(self.num_dof, 1)
+            self.joint_kd_coeffs = self.generate_constant(self.num_dof, 1)
+        if dr.randomize_base_euler_bias:
+            self.base_euler_bias = self.generate_random(dr.base_euler_bias_range, num=3)
+        else:
+            self.base_euler_bias = self.generate_constant(3, 0)
 
     def _create_envs(self):
         """ Creates environments:

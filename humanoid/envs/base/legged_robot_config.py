@@ -204,6 +204,9 @@ class LeggedRobotCfg(BaseConfig):
         randomize_joint_kd = False
         joint_kd_range = [0.8, 1.2]
 
+        randomize_base_euler_bias = True
+        base_euler_bias_range = [-0.05, 0.05]
+
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
