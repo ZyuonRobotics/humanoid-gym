@@ -628,7 +628,7 @@ class LeggedRobot(BaseTask):
             )
             return getattr(self, name)
         elif name.startswith("base_euler"):
-            axis = list(name.lower().split("_")[-1])
+            axis = list(name.replace("base_euler_", ""))
             assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
             index = ["xyz".index(ax) for ax in axis]
             return self.base_euler_xyz[:, index] + self.base_euler_bias[:, index]
