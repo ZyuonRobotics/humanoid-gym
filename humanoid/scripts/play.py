@@ -48,7 +48,7 @@ from datetime import datetime
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, ENV_NUM)
     env_cfg.sim.max_gpu_contact_pairs = 2**10
     # env_cfg.terrain.mesh_type = 'trimesh'
     env_cfg.terrain.mesh_type = 'plane'
@@ -112,30 +112,30 @@ def play(args):
             os.mkdir(experiment_dir)
         video = cv2.VideoWriter(dir, fourcc, 50.0, (1920, 1080))
     if RECORD_DATA:
-        qpos_np = np.zeros((stop_state_log, 7 + env.num_dof))
-        qvel_np = np.zeros((stop_state_log, 6 + env.num_dof))
-        action_np = np.zeros((stop_state_log, env.num_dof))
+        qpos_np = np.zeros((stop_state_log, ENV_NUM, 7 + env.num_dof))
+        qvel_np = np.zeros((stop_state_log, ENV_NUM, 6 + env.num_dof))
+        action_np = np.zeros((stop_state_log, ENV_NUM, env.num_dof))
 
     for i in tqdm(range(stop_state_log)):
 
         actions = policy(obs.detach()) # * 0.
         
         if FIX_COMMAND:
-            env.commands[:, 0] = 0.5    # 1.0
+            env.commands[:, 0] = 0.6    # 1.0
             env.commands[:, 1] = 0.
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.
         if RECORD_DATA:
             qpos_np[i] = np.concatenate([
-                env.root_states[robot_index, :3].cpu().numpy(),
-                env.root_states[robot_index, [6, 3, 4, 5]].cpu().numpy(),
-                env.dof_pos[robot_index].cpu().numpy(),
-            ])
+                env.root_states[:, :3].cpu().numpy(),
+                env.root_states[:, [6, 3, 4, 5]].cpu().numpy(),
+                env.dof_pos.cpu().numpy(),
+            ], axis=-1)
             qvel_np[i] = np.concatenate([
-                env.root_states[robot_index, 7:10].cpu().numpy(), # lin vel should be global
-                env.base_ang_vel[robot_index].cpu().numpy(),
-                env.dof_vel[robot_index].cpu().numpy(),
-            ])
+                env.root_states[:, 7:10].cpu().numpy(), # lin vel should be global
+                env.base_ang_vel.cpu().numpy(),
+                env.dof_vel.cpu().numpy(),
+            ], axis=-1)
             action_np[i] = actions.detach()[robot_index].cpu().numpy()
 
         obs, critic_obs, rews, dones, infos = env.step(actions.detach())
@@ -186,6 +186,7 @@ def play(args):
 
 if __name__ == '__main__':
     EXPORT_POLICY = True
+    ENV_NUM = 1
     RENDER = True
     FIX_COMMAND = True
     RECORD_DATA = True
