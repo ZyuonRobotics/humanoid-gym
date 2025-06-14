@@ -45,9 +45,9 @@ class PlayMujoco:
         self.default_dof_pos = np.array(DEFAULT_JOINT_POS) if default_dof_pos is None else default_dof_pos
 
         self.npz = np.load(self.npz_path, allow_pickle=True)
-        self.isaacgym_qpos = self.npz["qpos"]
-        self.isaacgym_qvel = self.npz["qvel"]
-        self.isaacgym_action = self.npz["action"]
+        self.isaacgym_qpos = self.npz["qpos"][:, 0]
+        self.isaacgym_qvel = self.npz["qvel"][:, 0]
+        self.isaacgym_action = self.npz["action"][:, 0]
         self.isaacgym_length = self.isaacgym_qpos.shape[0]
 
         self.model = mujoco.MjModel.from_xml_path(self.robot_xml_path)
@@ -103,6 +103,7 @@ class PlayMujoco:
 
             self.mujoco_qpos[i+1] = self.data.qpos
             self.mujoco_qvel[i+1] = self.data.qvel
+
     def draw_all_qpos(self):
         fig, axes = self.get_figure(self.mujoco_qpos.shape[1])
         for i in range(self.mujoco_qpos.shape[1]):
