@@ -592,13 +592,11 @@ class LeggedRobot(BaseTask):
         self.height_samples = torch.tensor(self.terrain.heightsamples).view(self.terrain.tot_rows, self.terrain.tot_cols).to(self.device)
 
     def fix_dof_props_asset(self, props):
-        jnt_range = torch.from_numpy(self.mujoco_model.jnt_range).to(self.device).to(torch.float32)
         jnt_stiffness = torch.from_numpy(self.mujoco_model.jnt_stiffness).to(self.device).to(torch.float32)
         dof_frictionloss = torch.from_numpy(self.mujoco_model.dof_frictionloss).to(self.device).to(torch.float32)
         actuator_ctrlrange = torch.from_numpy(self.mujoco_model.actuator_ctrlrange).to(self.device)
         for i in range(len(props)):
-            props["lower"][i] = jnt_range[i+1, 0]
-            props["upper"][i] = jnt_range[i+1, 1]
+            assert props["hasLimits"][i], "Joints must have limits!"
             props["stiffness"][i] = jnt_stiffness[i+1]
             props["friction"][i] = dof_frictionloss[i+6]
             assert abs(actuator_ctrlrange[i, 0]) == abs(actuator_ctrlrange[i, 1])
