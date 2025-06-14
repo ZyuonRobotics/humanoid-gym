@@ -1,6 +1,11 @@
 <mujoco>
   <option timestep="0.001" iterations='50' solver='PGS' gravity='0 0 -9.81' />
   <compiler angle="radian" autolimits="true" meshdir="../meshes" />
+  <default>
+    <joint limited="true" armature="0.05" damping="0.01"/>
+    <motor ctrllimited="true" ctrlrange="-100 100"/>
+    <equality solref="0.005 1"/>
+  </default>
   <asset>
     <mesh name="base_link" file="base_link.STL" />
     <mesh name="neck_base_link" file="neck_base_link.STL" />
