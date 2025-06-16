@@ -47,7 +47,7 @@ setup(
                       'tqdm',
                       'numpy==1.23.5',
                       'opencv-python',
-                      'mujoco==2.3.6',
+                      'mujoco==3.2.3',
                       'mujoco-python-viewer',
                       'matplotlib',
                       'onnx',
