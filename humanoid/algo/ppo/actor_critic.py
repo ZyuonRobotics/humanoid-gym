@@ -135,9 +135,9 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
     parser.add_argument("path", type=str)
-    parser.add_argument("--single_obs_num", default=47 + 3 * 7, type=int)
-    parser.add_argument("--single_privileged_obs_num", default=74+ 4 * 7 + 4 + 19 * 5 + 3, type=int)
-    parser.add_argument("--action_num", default=12 + 7, type=int)
+    parser.add_argument("--single_obs_num", default=705 // 15, type=int)
+    parser.add_argument("--single_privileged_obs_num", default=423 // 3, type=int)
+    parser.add_argument("--action_num", default=12, type=int)
     parser.add_argument("--frame_stack", default=15, type=int)
     parser.add_argument("--c_frame_stack", default=3, type=int)
 

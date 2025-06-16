@@ -28,19 +28,23 @@ class G1FreeEnv(XBotLFreeEnv):
         self.ref_dof_pos[:, 4] = sin_pos_l * scale_1
         # right foot stance phase set to default joint pos
         sin_pos_r[sin_pos_r < 0.1] = 0
-        self.ref_dof_pos[:, 5] = -sin_pos_r * scale_1
-        self.ref_dof_pos[:, 8] = sin_pos_r * scale_2
-        self.ref_dof_pos[:, 9] = -sin_pos_r * scale_1
+        self.ref_dof_pos[:, 6] = -sin_pos_r * scale_1
+        self.ref_dof_pos[:, 9] = sin_pos_r * scale_2
+        self.ref_dof_pos[:, 10] = -sin_pos_r * scale_1
 
         self.ref_action = 2 * self.ref_dof_pos
 
     def get_symm_dof(self, value):
         res = value.clone()
-        axis = self.get_dof_axis()
-        yaw_or_roll = axis[:, 0].abs().bool() | axis[:, 2].abs().bool()
+        if self.asset_type == "mjcf":
+            axis = self.get_dof_axis()
+            yaw_or_roll = axis[:, 0].abs().bool() | axis[:, 2].abs().bool()
+        else:
+            yaw_or_roll = torch.tensor([False,  True,  True, False, False,  True, False,  True,  True, False,
+        False,  True], device='cuda:0')
 
         res[:, :12] = torch.roll(res[:, :12], shifts=6, dims=-1)
-        res[:, 15:29] = torch.roll(res[:, 15:29], shifts=7, dims=-1)
+        # res[:, 15:29] = torch.roll(res[:, 15:29], shifts=7, dims=-1)
         res[:, yaw_or_roll] *= -1
         return res
 
@@ -64,5 +68,5 @@ class G1FreeEnv(XBotLFreeEnv):
         joint_pos = self.dof_pos.clone()
         pos_target = self.ref_dof_pos.clone()
         diff = joint_pos - pos_target
-        r = torch.exp(-1 * torch.norm(diff, dim=1)) - 0.2 * torch.norm(diff, dim=1).clamp(0, 0.5)
+        r = torch.exp(-2 * torch.norm(diff, dim=1)) - 0.2 * torch.norm(diff, dim=1).clamp(0, 0.5)
         return r

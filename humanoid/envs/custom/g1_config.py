@@ -38,7 +38,7 @@ class G1Cfg(XBotLCfg):
     """
     class env(XBotLCfg.env):
         # change the observation dim
-        num_active_dofs = 29
+        num_active_dofs = 12
         num_passive_dofs = 0
         num_commands = 5
 
@@ -66,15 +66,14 @@ class G1Cfg(XBotLCfg):
         torque_limit = 1.0
 
     class asset(XBotLCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/mjcf/robot.xml'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/mjcf/12dof.xml'
+        # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/urdf/12dof.urdf'
 
         name = "g1"
         foot_names = ["left_ankle_roll_link", "right_ankle_roll_link"]
         knee_names = ["left_knee_joint", "right_knee_joint"]
 
-        terminate_after_contacts_on = ['pelvis']
-        for lr, name in product(['left', 'right'], ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"]):
-            terminate_after_contacts_on.append(f'{lr}_{name}_link')
+        terminate_after_contacts_on = ["pelvis"]
         penalize_contacts_on = ["pelvis"]
         self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
@@ -114,39 +113,51 @@ class G1Cfg(XBotLCfg):
         pos = [0.0, 0.0, 0.793]
 
         default_joint_angles = {
-            "waist_yaw_joint": 0,
-            "waist_roll_joint": 0,
-            "waist_pitch_joint": 0
+            # "waist_yaw_joint": 0,
+            # "waist_roll_joint": 0,
+            # "waist_pitch_joint": 0
         }
         for lr, name in product(['left', 'right'], ["hip_pitch", "hip_roll", "hip_yaw", "knee", "ankle_pitch", "ankle_roll"]):
             default_joint_angles[f'{lr}_{name}_joint'] = 0
-        for lr, name in product(['left', 'right'], ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"]):
-            default_joint_angles[f'{lr}_{name}_joint'] = 0.
+        # for lr, name in product(['left', 'right'], ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"]):
+        #     default_joint_angles[f'{lr}_{name}_joint'] = 0.
 
     class control(XBotLCfg.control):
         stiffness = {
-            "waist_yaw_joint": 80,
-            "waist_roll_joint": 80,
-            "waist_pitch_joint": 80
+            # "waist_yaw_joint": 40,
+            # "waist_roll_joint": 40,
+            # "waist_pitch_joint": 40
         }
-        for lr, name, value in product(['left', 'right'], ["hip_pitch", "hip_roll", "hip_yaw", "knee", "ankle_pitch", "ankle_roll"], [80] * 6):
+        for lr, name, value in product(
+                ['left', 'right'],
+                ["hip_pitch", "hip_roll", "hip_yaw", "knee", "ankle_pitch", "ankle_roll"],
+                [100., 100., 100., 140., 40., 40.]
+        ):
             stiffness[f'{lr}_{name}_joint'] = value
-        for lr, name, value in product(['left', 'right'], ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"], [80.]*7):
-            stiffness[f'{lr}_{name}_joint'] = value
+        # for lr, name, value in product(
+        #         ['left', 'right'],
+        #         ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll", "wrist_pitch", "wrist_yaw"],
+        #         [40.]*7
+        # ):
+        #     stiffness[f'{lr}_{name}_joint'] = value
 
         damping = {
-            "waist_yaw_joint": 3,
-            "waist_roll_joint": 3,
-            "waist_pitch_joint": 3
+            # "waist_yaw_joint": 2,
+            # "waist_roll_joint": 2,
+            # "waist_pitch_joint": 2
         }
-        for lr, name, value in product(['left', 'right'],
-                                      ["hip_pitch", "hip_roll", "hip_yaw", "knee", "ankle_pitch", "ankle_roll"],
-                                      [3.] * 6):
+        for lr, name, value in product(
+                ['left', 'right'],
+                ["hip_pitch", "hip_roll", "hip_yaw", "knee", "ankle_pitch", "ankle_roll"],
+                [2., 2, 2, 4, 2, 2]
+        ):
             damping[f'{lr}_{name}_joint'] = value
-        for lr, name, value in product(['left', 'right'],
-                                       ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll",
-                                        "wrist_pitch", "wrist_yaw"], [3.] * 7):
-            damping[f'{lr}_{name}_joint'] = value
+        # for lr, name, value in product(
+        #         ['left', 'right'],
+        #         ["shoulder_pitch", "shoulder_roll", "shoulder_yaw", "elbow", "wrist_roll",  "wrist_pitch", "wrist_yaw"],
+        #         [2.] * 7
+        # ):
+        #     damping[f'{lr}_{name}_joint'] = value
 
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
@@ -188,7 +199,7 @@ class G1Cfg(XBotLCfg):
             heading = [-3.14, 3.14]
 
     class rewards(XBotLCfg.rewards):
-        base_height_target = 0.75
+        base_height_target = 0.793
         min_dist = 0.2
         max_dist = 0.5
         # put some settings here for LLM parameter tuning

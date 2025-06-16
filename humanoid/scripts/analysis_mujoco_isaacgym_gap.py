@@ -9,15 +9,15 @@ from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
 BASE_PATH = path.dirname(path.dirname(path.dirname(__file__)))
-KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "miao_arm", "mjcf", "robot.xml")
+KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "g1", "mjcf", "12dof.xml")
 
-DOF_NUM = 19
+DOF_NUM = 12
 
-P_GAINS = [30.] * 19
-D_GAINS = [3.] * 19
+P_GAINS = [100., 100., 100., 140., 40., 40.] * 2
+D_GAINS =  [2., 2, 2, 4, 2, 2] * 2
 
 DEFAULT_HEIGHT = 0.75
-DEFAULT_JOINT_POS = [0] * 19
+DEFAULT_JOINT_POS = [0] * DOF_NUM
 
 def get_local_value(v, quat):
     r = Rotation.from_quat(quat)
