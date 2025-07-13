@@ -8,8 +8,8 @@ import mujoco.viewer
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
-BASE_PATH = path.dirname(path.dirname(path.dirname(__file__)))
-KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "miao_arm", "mjcf", "robot.xml")
+BASE_PATH = path.dirname(path.dirname(path.dirname(path.realpath(__file__))))
+KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "Zhaplin", "robot.xml")
 
 DOF_NUM = 19
 
@@ -144,5 +144,5 @@ if __name__ == '__main__':
 
     # play_mujoco.draw_all_qpos()
     play_mujoco.draw_all_qvel()
-    # play_mujoco.draw_qpos(7)
-    # play_mujoco.draw_qvel(6)
+    #play_mujoco.draw_qpos(7)
+    #play_mujoco.draw_qvel(7)

@@ -12,14 +12,14 @@ import onnxruntime
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
-BASE_PATH = path.dirname(path.dirname(path.dirname(__file__)))
-KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "XBot", "mjcf", "robot.xml")
+BASE_PATH = path.dirname(path.dirname(path.dirname(path.realpath(__file__))))
+KUAVO_MJCF_PATH = path.join(BASE_PATH, "resources", "robots", "Zhaplin", "robot.xml")
 
-P_GAINS = [200, 200, 350, 350, 15, 15, 200, 200, 350, 350, 15, 15]
-D_GAINS = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+P_GAINS = np.array([30.]*19, dtype=np.double)
+D_GAINS = np.array([3]*19, dtype=np.double)
 
 DEFAULT_HEIGHT = 0.9
-DEFAULT_JOINT_POS = [0] * 12
+DEFAULT_JOINT_POS = [0] * 19
 
 PERIOD_LENGTH = 0.64
 INPUT_LIST =["command", "dof_pos", "dof_vel", "actions", "base_ang_vel", "base_euler_xyz"]
@@ -34,7 +34,7 @@ class PlayMujoco:
             change_period=False,
             frame_stack=15,
             frame_stack_skip=1,
-            dof_num=12,
+            dof_num=19,
             robot_xml_path=KUAVO_MJCF_PATH,
             control_freq=10,
             p_gains=None,
@@ -89,7 +89,7 @@ class PlayMujoco:
         self.pre_action = np.zeros(dof_num)
         self.base_lin_acc = np.zeros(3)
 
-        self.vel_x, self.vel_y, self.vel_yaw = 0.0, 0.0, 0.0
+        self.vel_x, self.vel_y, self.vel_yaw = 0.4, 0.0, 0.0
         self.standing = 0
 
         self.actions = np.zeros(dof_num)
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     # curses.wrapper(play_mujoco.play)
     play_mujoco.play(None)
 
-    play_mujoco.draw_dof_pos([1], draw_action=True)
+    #play_mujoco.draw_dof_pos([1], draw_action=True)
     # play_mujoco.draw_dof_vel([4])
-    # play_mujoco.draw_torque([4])
+    play_mujoco.draw_torque([1])
     # # play_mujoco.draw_ang_vel()

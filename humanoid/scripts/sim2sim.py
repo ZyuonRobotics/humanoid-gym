@@ -35,7 +35,8 @@ from tqdm import tqdm
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from humanoid import LEGGED_GYM_ROOT_DIR
-from humanoid.envs import XBotLCfg
+from humanoid.envs import ZhaplinCfg
+from humanoid.envs import ZhaplinArmlessCfg
 import torch
 
 
@@ -126,20 +127,32 @@ def run_mujoco(policy, cfg):
             obs = np.zeros([1, cfg.env.num_single_obs], dtype=np.float32)
             eu_ang = quaternion_to_euler_array(quat)
             eu_ang[eu_ang > math.pi] -= 2 * math.pi
-
+            #----Zhaplin----
             obs[0, 0] = math.sin(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
             obs[0, 1] = math.cos(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
             obs[0, 2] = cmd.vx
             obs[0, 3] = cmd.vy
             obs[0, 4] = cmd.dyaw
-            obs[0, 5:17] = q
-            obs[0, 17:29] = dq
-            obs[0, 29:41] = action
-            obs[0, 41:44] = omega
-            obs[0, 44:47] = eu_ang
+            obs[0, 5:24] = q
+            obs[0, 24:43] = dq
+            obs[0, 43:62] = action
+            obs[0, 62:65] = omega
+            obs[0, 65:68] = eu_ang
+            '''
+            #----ZhaplinArmless----
+            obs[0, 0] = math.sin(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
+            obs[0, 1] = math.cos(2 * math.pi * count_lowlevel * cfg.sim_config.dt  / 0.64)
+            obs[0, 2] = cmd.vx
+            obs[0, 3] = cmd.vy
+            obs[0, 4] = cmd.dyaw
+            obs[0, 5:16] = q
+            obs[0, 16:27] = dq
+            obs[0, 27:38] = action
+            obs[0, 38:41] = omega
+            obs[0, 41:44] = eu_ang
+            '''
 
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
-
             hist_obs.append(obs)
             hist_obs.popleft()
 
@@ -148,6 +161,7 @@ def run_mujoco(policy, cfg):
                 policy_input[0, i * cfg.env.num_single_obs : (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
             action[:] = policy(torch.tensor(policy_input))[0].detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
+
 
             target_q = action * cfg.control.action_scale
 
@@ -175,22 +189,31 @@ if __name__ == '__main__':
     parser.add_argument('--terrain', action='store_true', help='terrain or plane')
     args = parser.parse_args()
 
-    class Sim2simCfg(XBotLCfg):
+    class Sim2simCfg(ZhaplinArmlessCfg):
 
         class sim_config:
             if args.terrain:
                 mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L-terrain.xml'
             else:
-                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L.xml'
-                # mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/robot.xml'
+                #mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/XBot-L.xml'
+                #mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/XBot/mjcf/robot.xml'
+                mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/Zhaplin/robot.xml'
+                #mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/Zhaplinarmless/robot.xml'
             sim_duration = 60.0
             dt = 0.001
             decimation = 10
 
         class robot_config:
-            kps = np.array([200, 200, 350, 350, 15, 15, 200, 200, 350, 350, 15, 15], dtype=np.double)
-            kds = np.array([10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=np.double)
-            tau_limit = 200. * np.ones(12, dtype=np.double)
+            #----Zhaplin----
+            kps = np.array([30.]*19, dtype=np.double)
+            kds = np.array([3]*19, dtype=np.double)
+            tau_limit = 200. * np.ones(19, dtype=np.double)
+            #----ZhaplinArmless----
+            '''
+            kps = np.array([30.]*11, dtype=np.double)
+            kds = np.array([3]*11, dtype=np.double)
+            tau_limit = 200. * np.ones(11, dtype=np.double)
+            '''
 
     policy = torch.jit.load(args.load_model)
     run_mujoco(policy, Sim2simCfg())
