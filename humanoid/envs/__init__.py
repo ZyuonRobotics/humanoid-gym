@@ -37,9 +37,12 @@ from .custom.humanoid_config import XBotLCfg, XBotLCfgPPO
 from .custom.humanoid_env import XBotLFreeEnv
 from .custom.zhaplin_config import ZhaplinCfg,ZhaplinCfgPPO
 from .custom.zhaplin_env import ZhaplinFreeEnv
+from .custom.zhaplin_armless_env import ZhaplinArmlessFreeEnv
+from .custom.zhaplin_armless_config import ZhaplinArmlessCfg,ZhaplinArmlessCfgPPO
 
 from humanoid.utils.task_registry import task_registry
 
 
 task_registry.register( "humanoid_ppo", XBotLFreeEnv, XBotLCfg(), XBotLCfgPPO() )
 task_registry.register( "zhaplin_ppo", ZhaplinFreeEnv,ZhaplinCfg(),ZhaplinCfgPPO())
+task_registry.register( "zhaplin_armless_ppo", ZhaplinArmlessFreeEnv,ZhaplinArmlessCfg(),ZhaplinArmlessCfgPPO())

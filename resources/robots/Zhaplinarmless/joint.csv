@@ -1,0 +1,13 @@
+armature,axis0,axis1,axis2,bodyid,damping,frictionloss,name,pos0,pos1,pos2,range0,range1,stiffness,type
+0,0,0,1,1,0,0,dummy_to_base_link,0,0,0,0,0,0,free
+0.05,0,0,1,2,0,0.175,waist-yaw,0,0,0,-1,1,0,hinge
+0.05,0,1,0,3,0,0.075,left-hip-pitch,0,0,0,-1.05,1.05,0,hinge
+0.05,1,0,0,4,0,0.075,left-hip-roll,0,0,0,-0.52,0.785,0,hinge
+0.05,0,0,1,5,0,0.075,left-hip-yaw,0,0,0,-0.52,0.785,0,hinge
+0.05,0,1,0,6,0,0.075,left-knee-pitch,0,0,0,-0.3,2.3562,0,hinge
+0.05,0,1,0,7,0,0.075,left-ankle-pitch,0,0,0,-1.047,0.3,0,hinge
+0.05,0,1,0,8,0,0.075,right-hip-pitch,0,0,0,-1.05,1.05,0,hinge
+0.05,1,0,0,9,0,0.075,right-hip-roll,0,0,0,-0.785,0.52,0,hinge
+0.05,0,0,1,10,0,0.075,right-hip-yaw,0,0,0,-0.785,0.52,0,hinge
+0.05,0,1,0,11,0,0.075,right-knee-pitch,0,0,0,-0.3,2.3562,0,hinge
+
