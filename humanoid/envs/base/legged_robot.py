@@ -342,6 +342,15 @@ class LeggedRobot(BaseTask):
 
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        num_standing_envs = int(self.cfg.commands.rel_standing_envs * len(env_ids))
+        random_perm = torch.randperm(len(env_ids))
+        standing_env_ids = env_ids[random_perm[:num_standing_envs]]
+        random_env_ids = env_ids[random_perm[num_standing_envs:]]
+        # standing
+        self.commands[standing_env_ids, :4] = 0
+        self.commands[standing_env_ids, 4] = 1
+        # random
+        self.commands[random_env_ids, 4] = 0
 
 
 
@@ -634,7 +643,7 @@ class LeggedRobot(BaseTask):
             phase = self._get_phase()
             sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
             cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
-            return torch.cat((sin_pos, cos_pos, self.commands[:, :3]), dim=1)
+            return torch.cat((sin_pos, cos_pos, self.commands[:, [0,1,2,4]]), dim=1)
         elif name == "stance_mask":
             return self._get_gait_phase()
         elif name == "contact_mask":

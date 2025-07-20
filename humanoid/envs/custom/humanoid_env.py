@@ -117,43 +117,6 @@ class XBotLFreeEnv(LeggedRobot):
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
         stance_mask[self.commands[:, 4].to(bool)] = 1
         return stance_mask
-    
-    def get_obs(self, name):
-        if name == "dof_pos":
-            return self.dof_pos + self.joint_pos_biases
-        elif name in [
-            "dof_vel", "actions",
-            "base_lin_vel", "base_ang_vel",
-            "rand_push_force", "rand_push_torque",
-            "friction_coeffs", "restitution_coeffs", "base_mass_coeffs", "base_com_coeffs",
-            "joint_friction_coeffs", "joint_armature_coeffs", "joint_pos_biases",
-            "joint_kp_coeffs", "joint_kd_coeffs", "base_euler_bias"
-        ]:
-            assert len(getattr(self, name).shape) == 2, (
-                f"Observation shape must be (num_envs, num_obs), but {name} is {getattr(self, name).shape}"
-            )
-            return getattr(self, name)
-        elif name.startswith("base_euler"):
-            axis = list(name.replace("base_euler_", ""))
-            assert len(axis) == len(set(axis)) and set(axis).issubset({"x", "y", "z"})
-            index = ["xyz".index(ax) for ax in axis]
-            return self.base_euler_xyz[:, index] + self.base_euler_bias[:, index]
-        elif name == "command_input":
-            phase = self._get_phase()
-            sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
-            cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
-            return torch.cat((sin_pos, cos_pos, self.commands[:, :4]), dim=1)
-        elif name == "stance_mask":
-            return self._get_gait_phase()
-        elif name == "contact_mask":
-            return self.contact_forces[:, self.feet_indices, 2] > 5.
-        elif name == "target_dof_pos":
-            self.compute_ref_state()
-            return self.ref_dof_pos
-        elif name == "measure_heights":
-            return torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.)
-        else:
-            raise NotImplemented
 
     def compute_ref_state(self):
         phase = self._get_phase()
@@ -249,31 +212,6 @@ class XBotLFreeEnv(LeggedRobot):
     def get_symm_action(self, batch_action):
         assert len(batch_action.shape) == 2 and batch_action.shape[1] == self.num_actions
         return self.get_symm_dof(batch_action.clone())
-
-    def _resample_commands(self, env_ids):
-        """ Randommly select commands of some environments
-
-        Args:
-            env_ids (List[int]): Environments ids for which new commands are needed
-        """
-        self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        if self.cfg.commands.heading_command:
-            self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        else:
-            self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-
-        # set small commands to zero
-        num_standing_envs = int(self.cfg.commands.rel_standing_envs * len(env_ids))
-        random_perm = torch.randperm(len(env_ids))
-        standing_env_ids = env_ids[random_perm[:num_standing_envs]]
-        random_env_ids = env_ids[random_perm[num_standing_envs:]]
-        # standing
-        self.commands[standing_env_ids, :4] = 0
-        self.commands[standing_env_ids, 4] = 1
-        # random
-        self.commands[random_env_ids, 4] = 0
-
 
     def get_obs_noise(self, name):
         if name in ["command_input", "actions"]:
