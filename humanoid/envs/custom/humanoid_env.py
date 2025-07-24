@@ -100,6 +100,7 @@ class XBotLFreeEnv(LeggedRobot):
     def  _get_phase(self):
         cycle_time = self.cfg.rewards.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time
+        phase[self.commands[:, 4].to(bool)] = 0
         return phase
 
     def _get_gait_phase(self):
@@ -114,9 +115,8 @@ class XBotLFreeEnv(LeggedRobot):
         stance_mask[:, 1] = sin_pos < 0
         # Double support phase
         stance_mask[torch.abs(sin_pos) < 0.1] = 1
-
+        stance_mask[self.commands[:, 4].to(bool)] = 1
         return stance_mask
-    
 
     def compute_ref_state(self):
         phase = self._get_phase()
@@ -138,7 +138,7 @@ class XBotLFreeEnv(LeggedRobot):
         self.ref_dof_pos[:, 10] = sin_pos_r * scale_1
         # Double support phase
         self.ref_dof_pos[torch.abs(sin_pos) < 0.1] = 0
-
+        self.ref_dof_pos[self.commands[:, 4].to(bool)] = self.default_dof_pos
         self.ref_action = 2 * self.ref_dof_pos
 
 

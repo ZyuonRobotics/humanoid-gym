@@ -39,7 +39,7 @@ class XBotLCfg(LeggedRobotCfg):
         # change the observation dim
         num_active_dofs = 12
         num_passive_dofs = 0
-        num_commands = 5
+        num_commands = 6
 
         frame_stack = 15
         c_frame_stack = 3
@@ -199,9 +199,10 @@ class XBotLCfg(LeggedRobotCfg):
 
     class commands(LeggedRobotCfg.commands):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
-        num_commands = 4
+        num_commands = 5
         resampling_time = 8.  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
+        rel_standing_envs = 0.2
 
         class ranges:
             lin_vel_x = [-0.3, 0.6]   # min max [m/s]
