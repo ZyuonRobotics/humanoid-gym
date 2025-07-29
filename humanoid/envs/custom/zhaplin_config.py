@@ -39,8 +39,8 @@ class ZhaplinCfg(XBotLCfg):
     class asset(XBotLCfg.asset):
         file = file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/Zhaplin/robot.xml'
         name = "zhaplin"
-        foot_names = ["right-ankle-pitch", "left-ankle-pitch"]
-        knee_names = ["right-knee-pitch", "left-knee-pitch"]
+        foot_names = ["left-ankle-pitch", "right-ankle-pitch"]
+        knee_names = ["left-knee-pitch", "right-knee-pitch"]
 
         terminate_after_contacts_on = ['torso']
         for lr, name in product(['right', 'left'], ["shoulder-pitch", "shoulder-roll", "shoulder-yaw", "elbow-pitch"]):
