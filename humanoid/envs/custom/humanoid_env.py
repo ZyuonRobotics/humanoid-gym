@@ -218,10 +218,10 @@ class XBotLFreeEnv(LeggedRobot):
             return torch.zeros((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device)
         elif name in ["dof_pos", "dof_vel", "actions", "base_lin_vel", "base_ang_vel"]:
             scale = getattr(self.cfg.noise.noise_scales, name)
-            return torch.ones((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device) * scale
+            return torch.randn((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device) * scale
         elif name.startswith("base_euler"):
             scale = getattr(self.cfg.noise.noise_scales, "base_euler")
-            return torch.ones((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device) * scale
+            return torch.randn((self.num_envs, self.cfg.env.get_obs_dim(name)), device=self.device) * scale
         else:
             raise NotImplemented
 
