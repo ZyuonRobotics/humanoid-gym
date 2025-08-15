@@ -71,7 +71,7 @@ class G1Cfg(XBotLCfg):
 
         name = "g1"
         foot_names = ["left_ankle_roll_link", "right_ankle_roll_link"]
-        knee_names = ["left_knee_joint", "right_knee_joint"]
+        knee_names = ["left_knee_link", "right_knee_link"]
 
         terminate_after_contacts_on = ["pelvis"]
         penalize_contacts_on = ["pelvis"]
